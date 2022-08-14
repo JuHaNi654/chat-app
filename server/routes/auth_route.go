@@ -19,7 +19,7 @@ type Auth struct {
 }
 
 type UserToken struct {
-	Id       string `json:"id"`
+	Id       string `json:"_id" bson:"_id"`
 	Username string `json:"username"`
 }
 
