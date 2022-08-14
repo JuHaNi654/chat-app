@@ -2,6 +2,8 @@ package internal
 
 import (
 	"log"
+	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -9,29 +11,53 @@ import (
 )
 
 func Authorized() gin.HandlerFunc {
+	secret := []byte(os.Getenv("JWT_SECRET"))
+
 	return func(c *gin.Context) {
-		tokenString := strings.Split(c.Request.Header["Authorization"][0], " ")[1]
+		bearer := c.Request.Header["Authorization"]
 
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			return []byte("AllYourBase"), nil
-		})
-
-		if token.Valid {
-			log.Println("We cool")
+		if len(bearer) == 0 {
+			c.Abort()
+			c.SecureJSON(http.StatusUnauthorized, gin.H{
+				"msg": "Unauthorized",
+			})
 			return
 		}
 
-		if ve, ok := err.(*jwt.ValidationError); ok {
-			if ve.Errors&jwt.ValidationErrorMalformed != 0 {
-				log.Println("That's not even a token")
-			} else if ve.Errors&jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet != 0 {
-				// Token is either expired or not active yet
-				log.Println("Timing is everything")
-			} else {
-				log.Println("Couldn't handle this token: ", err)
-			}
+		tokenString := strings.Split(bearer[0], " ")
+
+		if len(tokenString) < 2 {
+			c.Abort()
+			c.SecureJSON(http.StatusUnauthorized, gin.H{
+				"msg": "Unauthorized",
+			})
+			return
+		}
+
+		token, err := jwt.Parse(tokenString[1], func(token *jwt.Token) (interface{}, error) {
+			return secret, nil
+		})
+
+		if token.Valid {
+			c.Next()
+			return
 		} else {
+			c.Abort()
+
+			if ve, ok := err.(*jwt.ValidationError); ok {
+				if ve.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
+					c.SecureJSON(http.StatusUnauthorized, gin.H{
+						"msg": "Session expired",
+					})
+
+					return
+				}
+			}
+
 			log.Println("Couldn't handle this token: ", err)
+			c.SecureJSON(http.StatusInternalServerError, gin.H{
+				"msg": "Something went wrong",
+			})
 		}
 
 	}

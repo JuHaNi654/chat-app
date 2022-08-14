@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
@@ -20,6 +21,11 @@ type Auth struct {
 type UserToken struct {
 	Id       string `json:"id"`
 	Username string `json:"username"`
+}
+
+type TokenPayload struct {
+	Id string `json:"id"`
+	jwt.StandardClaims
 }
 
 func Login(ctx *gin.Context, db *mongo.Client) {
@@ -56,11 +62,15 @@ func Login(ctx *gin.Context, db *mongo.Client) {
 	var payload UserToken
 	err = coll.FindOne(context.TODO(), filter).Decode(&payload)
 
-	// FIXME: fix expiration problem in token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":  payload.Id,
-		"exp": 21600,
-	})
+	claims := TokenPayload{
+		payload.Id,
+		jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour * 6).Unix(),
+			Issuer:    "test",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	secret := []byte(os.Getenv("JWT_SECRET"))
 	tokenString, err := token.SignedString(secret)
