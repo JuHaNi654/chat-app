@@ -33,6 +33,13 @@ func main() {
 	v1 := router.Group("/v1")
 	{
 		v1.POST("/login", func(c *gin.Context) { routes.Login(c, db.Client) })
+
+		authorized := v1.Group("/")
+		authorized.Use(internal.Authorized())
+		authorized.GET("/test", func(c *gin.Context) {
+			c.SecureJSON(http.StatusOK, gin.H{"msg": "Authorized route"})
+		})
+
 	}
 
 	srv := &http.Server{

@@ -56,6 +56,7 @@ func Login(ctx *gin.Context, db *mongo.Client) {
 	var payload UserToken
 	err = coll.FindOne(context.TODO(), filter).Decode(&payload)
 
+	// FIXME: fix expiration problem in token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":  payload.Id,
 		"exp": 21600,
