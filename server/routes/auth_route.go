@@ -2,7 +2,6 @@ package routes
 
 import (
 	"context"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -30,7 +29,6 @@ func Login(ctx *gin.Context, db *mongo.Client) {
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			log.Println("Email not found")
 			ctx.SecureJSON(http.StatusUnauthorized, gin.H{"msg": "Invalid email or password"})
 			return
 		}
@@ -42,7 +40,6 @@ func Login(ctx *gin.Context, db *mongo.Client) {
 	}
 
 	if result.Password != body.Password {
-		log.Println("Invalid password")
 		ctx.SecureJSON(http.StatusUnauthorized, gin.H{"msg": "Invalid email or password"})
 		return
 	}
