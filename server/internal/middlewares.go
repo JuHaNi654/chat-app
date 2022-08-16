@@ -17,8 +17,7 @@ func Authorized() gin.HandlerFunc {
 		bearer := c.Request.Header["Authorization"]
 
 		if len(bearer) == 0 {
-			c.Abort()
-			c.SecureJSON(http.StatusUnauthorized, gin.H{
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"msg": "Unauthorized",
 			})
 			return
@@ -27,8 +26,7 @@ func Authorized() gin.HandlerFunc {
 		tokenString := strings.Split(bearer[0], " ")
 
 		if len(tokenString) < 2 {
-			c.Abort()
-			c.SecureJSON(http.StatusUnauthorized, gin.H{
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"msg": "Unauthorized",
 			})
 			return
@@ -42,11 +40,9 @@ func Authorized() gin.HandlerFunc {
 			c.Next()
 			return
 		} else {
-			c.Abort()
-
 			if ve, ok := err.(*jwt.ValidationError); ok {
 				if ve.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
-					c.SecureJSON(http.StatusUnauthorized, gin.H{
+					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 						"msg": "Session expired",
 					})
 
@@ -55,7 +51,7 @@ func Authorized() gin.HandlerFunc {
 			}
 
 			log.Println("Couldn't handle this token: ", err)
-			c.SecureJSON(http.StatusInternalServerError, gin.H{
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"msg": "Something went wrong",
 			})
 		}

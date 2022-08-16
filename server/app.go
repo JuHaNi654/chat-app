@@ -33,7 +33,7 @@ func main() {
 	v1 := router.Group("/v1")
 	{
 		v1.POST("/login", func(c *gin.Context) { routes.Login(c, db.Client) })
-
+		v1.POST("/register", func(c *gin.Context) { routes.Register(c, db.Client) })
 		authorized := v1.Group("/")
 		authorized.Use(internal.Authorized())
 		authorized.GET("/test", func(c *gin.Context) {
