@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -53,9 +54,7 @@ func Login(ctx *gin.Context, db *mongo.Client) {
 			return
 		}
 
-		ctx.SecureJSON(http.StatusInternalServerError, gin.H{
-			"msg": "Something went wrong",
-		})
+		ReturnServerError(err, ctx)
 		return
 	}
 
@@ -81,10 +80,7 @@ func Login(ctx *gin.Context, db *mongo.Client) {
 	secret := []byte(os.Getenv("JWT_SECRET"))
 	tokenString, err := token.SignedString(secret)
 	if err != nil {
-		log.Printf("Error occurred while creating jwt: %v\n", err)
-		ctx.SecureJSON(http.StatusInternalServerError, gin.H{
-			"msg": "Something went wrong",
-		})
+		ReturnServerError(err, ctx)
 		return
 	}
 
@@ -99,7 +95,7 @@ func Register(ctx *gin.Context, db *mongo.Client) {
 			out := make([]models.FieldErrorMsg, len(ve))
 			for i, fe := range ve {
 				out[i] = models.FieldErrorMsg{
-					Field:   fe.Field(),
+					Field:   strings.ToLower(fe.Field()),
 					Message: models.GetFieldErrorMsg(fe),
 				}
 			}
@@ -117,12 +113,41 @@ func Register(ctx *gin.Context, db *mongo.Client) {
 		log.Println(err)
 	}
 
-	coll := db.Database("chat").Collection("users")
-	result, err := coll.InsertOne(context.TODO(), doc)
+	var checkResult bson.M
 
+	// TODO: check if username already exists
+
+	coll := db.Database("chat").Collection("users")
+
+	err = coll.FindOne(context.TODO(), bson.D{{"email", user.Email}}).Decode(&checkResult)
 	if err != nil {
-		log.Println("Error while saving new user:", err)
-		ctx.SecureJSON(http.StatusInternalServerError, gin.H{"msg": "Something went wrong"})
+		if err != mongo.ErrNoDocuments {
+			ReturnServerError(err, ctx)
+			return
+		}
+	}
+
+	if len(checkResult) != 0 {
+		ctx.SecureJSON(http.StatusBadRequest, gin.H{"msg": "Email is already in use"})
+		return
+	}
+
+	err = coll.FindOne(context.TODO(), bson.D{{"username", user.Username}}).Decode(&checkResult)
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			ReturnServerError(err, ctx)
+			return
+		}
+	}
+
+	if len(checkResult) != 0 {
+		ctx.SecureJSON(http.StatusBadRequest, gin.H{"msg": "Username is already in use"})
+		return
+	}
+
+	result, err := coll.InsertOne(context.TODO(), doc)
+	if err != nil {
+		ReturnServerError(err, ctx)
 		return
 	}
 

@@ -13,22 +13,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func main() {
-	db := internal.NewDatabase()
-
-	go internal.InitDatabase(db)
-	defer func() {
-		db.Disconnect <- true
-	}()
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
+func SetupRouter(db *internal.Database) *gin.Engine {
 	router := gin.Default()
 	router.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "Welcome to Gin Server changed")
 
 	})
+
+	router.Use(internal.SetHeaders())
 
 	v1 := router.Group("/v1")
 	{
@@ -42,6 +34,21 @@ func main() {
 
 	}
 
+	return router
+}
+
+func main() {
+	client := internal.NewDatabase()
+
+	go internal.InitDatabase(client)
+	defer func() {
+		client.Disconnect <- true
+	}()
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	router := SetupRouter(client)
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: router,

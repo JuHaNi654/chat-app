@@ -5,10 +5,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 type Database struct {
@@ -23,9 +21,6 @@ func NewDatabase() *Database {
 }
 
 func InitDatabase(db *Database) {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
-	}
 	uri := os.Getenv("MONGODB_URI")
 	if uri == "" {
 		log.Fatal("You must set your 'MONGODB_URI' env variable")
@@ -44,11 +39,7 @@ func InitDatabase(db *Database) {
 		}
 	}()
 
-	if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
-		panic(err)
-	}
-
-	log.Println("Successfully connected and pinged.")
+	log.Println("Connected to the database")
 
 	select {
 	case <-db.Disconnect:

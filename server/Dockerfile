@@ -1,4 +1,4 @@
-FROM golang:1.18-alpine
+FROM golang:1.18-buster as development
 
 WORKDIR /app
 
@@ -10,3 +10,4 @@ RUN go mod download
 COPY . ./
 
 RUN go install github.com/cespare/reflex@latest 
+
